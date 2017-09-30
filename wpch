@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+from gi.repository import Notify
+import config as cfg
+import json, requests, urllib, os, time, argparse
+from subprocess import call
+from shutil import copyfile
+
+download_path = os.path.expanduser('~') + '/.wpch/'
+wallpaper_name = 'current_wallpaper'
+saved_images_path = os.path.expanduser('~') + '/Pictures/wpch/'
+unsplash_url = 'https://api.unsplash.com/photos/random'
+
+def download_wallpaper():
+    if not os.path.exists(download_path):
+        os.makedirs(download_path)
+
+    if os.path.isfile(download_path + wallpaper_name):
+        os.remove(download_path + wallpaper_name)
+
+    params = dict(
+            client_id=cfg.application_id,
+            featured=True
+    )
+    resp = requests.get(url=unsplash_url, params=params)
+    data = json.loads(resp.text)
+    
+    urllib.request.urlretrieve(data['urls']['raw'], download_path + wallpaper_name)
+    return download_path + wallpaper_name
+
+def set_wallpaper(path):
+    call(['feh', '--bg-fill', path])
+
+def notify_user():
+    Notify.init('WPCH')
+    notification = Notify.Notification.new('WPCH', 'Wallpaper has been changed')
+    notification.show()
+
+def save_wallpaper():
+    if not os.path.exists(saved_images_path):
+        os.makedirs(saved_images_path)
+    copyfile(download_path + wallpaper_name, saved_images_path + str(time.time()))
+
+def change_wallpaper():
+    path = download_wallpaper()
+    set_wallpaper(path)
+    notify_user()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('action', help='The action you want to take', type=str, choices=['change', 'save'])
+    args = parser.parse_args()
+
+    if(args.action == 'change'):
+        change_wallpaper()
+    else:
+        save_wallpaper()
